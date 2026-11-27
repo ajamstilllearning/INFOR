@@ -1,0 +1,30 @@
+# =====================================================
+# uploads/.htaccess — Hardening folder upload (Apache)
+# =====================================================
+
+# 1. MATIKAN eksekusi PHP/script di folder ini
+php_flag engine off
+Options -ExecCGI -Indexes
+AddType text/plain .php .php3 .php4 .php5 .phtml .pht .phar .cgi .pl .py .jsp .asp
+
+# 2. HANYA izinkan akses ke file gambar (whitelist)
+<FilesMatch "\.(jpe?g|png|gif|webp)$">
+    Require all granted
+</FilesMatch>
+<FilesMatch "^(?!.*\.(jpe?g|png|gif|webp)$).*$">
+    Require all denied
+</FilesMatch>
+
+# 3. Paksa browser TIDAK mengeksekusi file (cegah XSS lewat SVG/HTML)
+<FilesMatch "\.(jpe?g|png|gif|webp)$">
+    Header set X-Content-Type-Options "nosniff"
+    Header set Content-Disposition "inline"
+</FilesMatch>
+
+# 4. Sembunyikan daftar direktori
+Options -Indexes
+
+# 5. Blokir akses ke file dotfile (.htaccess, .env, dll)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
