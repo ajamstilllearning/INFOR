@@ -7,7 +7,7 @@ require_once __DIR__ . '/mailer.php';
 $email  = strtolower(trim($_POST['email'] ?? $_GET['email'] ?? ''));
 $errors = [];
 $info   = '';
-if (($_GET['kirim'] ?? '') === 'gagal') {
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['kirim'] ?? '') === 'gagal') {
     $errors[] = 'Gagal mengirim email OTP. Periksa konfigurasi SMTP lalu klik "Kirim ulang kode OTP".';
 }
 
