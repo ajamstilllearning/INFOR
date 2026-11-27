@@ -45,11 +45,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // ---- CEK DUPLIKASI EMAIL (PDO Prepared Statement) ----
+    // Email yang belum terverifikasi tidak dihitung: datanya ditimpa pendaftaran baru.
+    $userLamaId = null;
     if (!$errors) {
-        $stmt = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
+        hapus_akun_belum_verifikasi($pdo);
+
+        $stmt = $pdo->prepare('SELECT id, is_verified FROM users WHERE email = :email LIMIT 1');
         $stmt->execute([':email' => $email]);
-        if ($stmt->fetch()) {
+        $userLama = $stmt->fetch();
+        if ($userLama && (int)$userLama['is_verified'] === 1) {
             $errors[] = 'Email sudah terdaftar. Silakan gunakan email lain.';
+        } elseif ($userLama) {
+            $userLamaId = (int)$userLama['id'];
         }
     }
 
@@ -58,21 +65,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $otp      = (string) random_int(100000, 999999);       // 6 digit acak
         $hash     = password_hash($password, PASSWORD_DEFAULT); // bcrypt
         $expired  = date('Y-m-d H:i:s', time() + OTP_TTL);
+        $params   = [
+            ':nama'     => $nama,
+            ':email'    => $email,
+            ':password' => $hash,
+            ':role'     => $role,
+            ':no_wa'    => $noWa !== '' ? $noWa : null,
+            ':otp'      => $otp,
+            ':expired'  => $expired,
+        ];
 
         try {
-            $stmt = $pdo->prepare(
-                'INSERT INTO users (nama, email, password, role, no_wa, otp_code, otp_expired_at, is_verified)
-                 VALUES (:nama, :email, :password, :role, :no_wa, :otp, :expired, 0)'
-            );
-            $stmt->execute([
-                ':nama'     => $nama,
-                ':email'    => $email,
-                ':password' => $hash,
-                ':role'     => $role,
-                ':no_wa'    => $noWa !== '' ? $noWa : null,
-                ':otp'      => $otp,
-                ':expired'  => $expired,
-            ]);
+            if ($userLamaId !== null) {
+                $stmt = $pdo->prepare(
+                    'UPDATE users SET nama = :nama, email = :email, password = :password, role = :role,
+                            no_wa = :no_wa, otp_code = :otp, otp_expired_at = :expired
+                     WHERE id = :id AND is_verified = 0'
+                );
+                $stmt->execute($params + [':id' => $userLamaId]);
+            } else {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO users (nama, email, password, role, no_wa, otp_code, otp_expired_at, is_verified)
+                     VALUES (:nama, :email, :password, :role, :no_wa, :otp, :expired, 0)'
+                );
+                $stmt->execute($params);
+            }
         } catch (PDOException $e) {
             // UNIQUE constraint (race condition saat dua user daftar bersamaan)
             if ($e->getCode() === '23000') {
@@ -84,8 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (!$errors) {
-            kirim_email_otp($email, $nama, $otp);
-            redirect('verifikasi_otp.php?email=' . urlencode($email));
+            $terkirim = kirim_email_otp($email, $nama, $otp);
+            redirect('verifikasi_otp.php?email=' . urlencode($email) . ($terkirim ? '' : '&kirim=gagal'));
         }
     }
 }

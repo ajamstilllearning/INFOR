@@ -7,6 +7,9 @@ require_once __DIR__ . '/mailer.php';
 $email  = strtolower(trim($_POST['email'] ?? $_GET['email'] ?? ''));
 $errors = [];
 $info   = '';
+if (($_GET['kirim'] ?? '') === 'gagal') {
+    $errors[] = 'Gagal mengirim email OTP. Periksa konfigurasi SMTP lalu klik "Kirim ulang kode OTP".';
+}
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     exit('Email tidak valid. Silakan ulangi pendaftaran.');
@@ -33,8 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'kirim_u
     $upd = $pdo->prepare('UPDATE users SET otp_code = :otp, otp_expired_at = :exp WHERE id = :id');
     $upd->execute([':otp' => $otpBaru, ':exp' => $expired, ':id' => $user['id']]);
 
-    kirim_email_otp($email, $user['nama'], $otpBaru);
-    $info = 'Kode OTP baru telah dikirim ke email Anda.';
+    if (kirim_email_otp($email, $user['nama'], $otpBaru)) {
+        $info = 'Kode OTP baru telah dikirim ke email Anda.';
+    } else {
+        $errors[] = 'Gagal mengirim email OTP. Periksa konfigurasi SMTP lalu coba lagi.';
+    }
 }
 
 // ---------- Aksi: VERIFIKASI OTP ----------
