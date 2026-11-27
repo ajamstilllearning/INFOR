@@ -15,7 +15,7 @@ if (file_exists($autoload)) {
 
 /**
  * Kirim kode OTP ke email user.
- * Bila PHPMailer/SMTP belum siap, OTP ditulis ke logs/otp.log (mode development).
+ * Bila PHPMailer tidak ada atau pengiriman SMTP gagal, OTP ditulis ke logs/otp.log (mode development).
  */
 function kirim_email_otp(string $emailTujuan, string $namaTujuan, string $otp): bool
 {
@@ -47,11 +47,10 @@ function kirim_email_otp(string $emailTujuan, string $namaTujuan, string $otp): 
             return $mail->send();
         } catch (Exception $e) {
             error_log('[MAIL ERROR] ' . $mail->ErrorInfo);
-            return false;
         }
     }
 
-    // ---- Fallback development: catat OTP ke file log ----
+    // ---- Fallback development (PHPMailer tidak ada / SMTP gagal): catat OTP ke file log ----
     if (!is_dir(__DIR__ . '/logs')) {
         @mkdir(__DIR__ . '/logs', 0755, true);
     }

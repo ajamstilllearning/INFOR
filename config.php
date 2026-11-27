@@ -17,6 +17,7 @@ define('UPLOAD_DIR',   __DIR__ . '/uploads/');
 define('UPLOAD_URL',   BASE_URL . '/uploads/');
 define('MAX_UPLOAD_SIZE', 2 * 1024 * 1024); // 2MB
 define('OTP_TTL',      300);                // OTP berlaku 5 menit
+define('UNVERIFIED_TTL', 86400);            // akun belum verifikasi dihapus 24 jam setelah OTP kedaluwarsa
 
 // ---- Konfigurasi SMTP (PHPMailer) ----
 define('SMTP_HOST',      'smtp.gmail.com');

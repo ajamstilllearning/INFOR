@@ -83,6 +83,16 @@ function require_role(string $role): void
     }
 }
 
+/* ==================== AKUN BELUM TERVERIFIKASI ==================== */
+/** Hapus akun is_verified = 0 yang OTP-nya sudah lama kedaluwarsa. */
+function hapus_akun_belum_verifikasi(PDO $pdo): void
+{
+    $stmt = $pdo->prepare(
+        'DELETE FROM users WHERE is_verified = 0 AND (otp_expired_at IS NULL OR otp_expired_at < :batas)'
+    );
+    $stmt->execute([':batas' => date('Y-m-d H:i:s', time() - UNVERIFIED_TTL)]);
+}
+
 /* ==================== NORMALISASI NOMOR WHATSAPP ==================== */
 function normalize_no_wa(string $nomor): string
 {
